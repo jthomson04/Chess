@@ -2,16 +2,18 @@ package com.company;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class Board {
-    private ArrayList<Piece> pieces = new ArrayList<>();
+    private final ArrayList<Piece> pieces;
     private boolean whitesTurn = true;
-    private static PieceType[] initialOrder = {PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.KING, PieceType.QUEEN, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK};
+    private static final PieceType[] initialOrder = {PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.KING, PieceType.QUEEN, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK};
 
 
     public Board() {
-
+        pieces = new ArrayList<Piece>();
         for (int side=1; side<7; side+=5) { //Add Pieces
             for (int i = 0; i < 8; i++) {
                 pieces.add(new Piece(PieceType.PAWN, new Position(i, side), side == 1));
@@ -19,7 +21,10 @@ public class Board {
             }
         }
         drawBoard();
-
+    }
+    public Board(ArrayList<Piece> pieces) {
+        this.pieces = pieces;
+        drawBoard();
     }
 
     public Piece getPieceAtPosition(Position position) {
@@ -32,7 +37,6 @@ public class Board {
     }
 
     public void drawBoard() {
-        String[][] b = new String[8][8];
 
         for (int x = 7; x >= 0; x--) {
             String s = "";
@@ -69,6 +73,46 @@ public class Board {
             type = "B";
         }
         return type + team;
+    }
+
+    public Position[] possibleMoves(Position p) {
+        return possibleMoves(getPieceAtPosition(p));
+    }
+    public Position[] possibleMoves(Piece p) {
+        ArrayList<Position> possibleMoves = new ArrayList<>(Arrays.asList(p.possibleMoves()));
+
+        for (int i = 0; i < possibleMoves.size(); i++) {
+            Piece pieceAtLoc = getPieceAtPosition(possibleMoves.get(i));
+            if (pieceAtLoc != null && pieceAtLoc.white == p.white) {
+                possibleMoves.remove(pieceAtLoc.position);
+            }
+            if (p.type != PieceType.KNIGHT) {
+                Position[] spacesBetween = spacesBetween(p.position, possibleMoves.get(i));
+                for (Position b : spacesBetween) {
+                    if (getPieceAtPosition(b) != null) {
+                        possibleMoves.remove(b);
+                    }
+                }
+            }
+        }
+
+        Position[] pMoves = new Position[possibleMoves.size()];
+        return possibleMoves.toArray(pMoves);
+    }
+    private Position[] spacesBetween(Position p1, Position p2) {
+        int xShift = Integer.compare(p2.x(), p1.x());
+        int yShift = Integer.compare(p2.y(), p1.y());
+        int currentX = p1.x() + xShift;
+        int currentY = p1.y() + yShift;
+        ArrayList<Position> positions = new ArrayList<>();
+        while (currentX != p2.x() && currentY != p2.y()) {
+            positions.add(new Position(currentX, currentY));
+            currentX += xShift;
+            currentY += yShift;
+        }
+
+        Position[] p = new Position[positions.size()];
+        return positions.toArray(p);
     }
 
 
