@@ -99,6 +99,12 @@ public class Board {
                     }
                 }
             }
+            if (p.type == PieceType.PAWN) {
+                if (p.position.x() != possibleMoves.get(i).x() && pieceAtLoc == null) {
+                    possibleMoves.remove(i);
+                    increment = false;
+                }
+            }
             i = increment ? i+1 : i;
         }
 
@@ -119,6 +125,26 @@ public class Board {
 
         Position[] p = new Position[positions.size()];
         return positions.toArray(p);
+    }
+    private int pieceValue(Piece p) {
+        PieceType type = p.type;
+        if (type == PieceType.QUEEN) {
+            return 9;
+        } else if (type == PieceType.ROOK) {
+            return 5;
+        } else if (type == PieceType.BISHOP || type == PieceType.KNIGHT) {
+            return 3;
+        } else {
+            return 1;
+        }
+    }
+    private int scoreBoard() { // scores board with respect to white
+        int score = 0;
+        for (Piece p : pieces) {
+            score += p.white ? pieceValue(p) : -pieceValue(p);
+        }
+
+        return 0;
     }
 
 

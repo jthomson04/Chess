@@ -17,13 +17,29 @@ public class Piece {
     public Position[] possibleMoves() {
         if (type == PieceType.PAWN) {
             int mult = white ? 1 : -1;
+            Position[] forward;
             if ((white && position.y() == 1) || (!white && position.y() == 6)) {
-                return new Position[]{new Position(position.x(), position.y() + mult), new Position(position.x(), position.y() + 2*mult)};
+                forward = new Position[]{new Position(position.x(), position.y() + mult), new Position(position.x(), position.y() + 2*mult)};
             } else {
                 if (!(white && position.y() == 7) && !(!white && position.y() == 0)) {
-                    return new Position[]{new Position(position.x(), position.y() + mult)};
+                    forward = new Position[]{new Position(position.x(), position.y() + mult)};
+                } else {
+                    forward = new Position[0];
                 }
             }
+            Position[] diagonals = new Position[position.x() == 0 || position.x() == 7 ? 1 : 2];
+            int i = 0;
+            if (position.x() != 7) {
+                diagonals[i] = new Position(position.x()+1, position.y()+mult);
+                i++;
+            }
+            if (position.x() != 0) {
+                diagonals[i] = new Position(position.x()-1, position.y()+mult);
+            }
+            Position[] moves = new Position[forward.length+diagonals.length];
+            System.arraycopy(forward, 0, moves, 0, forward.length);
+            System.arraycopy(diagonals, 0, moves, forward.length, diagonals.length);
+            return moves;
         } else if (type == PieceType.ROOK) {
             return xyPositions();
         } else if (type == PieceType.QUEEN) {
@@ -67,7 +83,7 @@ public class Piece {
             Position[] p = new Position[positions.size()];
             return positions.toArray(p);
         }
-        return new Position[] {};
+
     }
 
     private Position[] xyPositions() {
