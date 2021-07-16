@@ -8,7 +8,6 @@ import java.util.List;
 
 public class Board {
     private final ArrayList<Piece> pieces;
-    private boolean whitesTurn = true;
     private static final PieceType[] initialOrder = {PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.KING, PieceType.QUEEN, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK};
 
 
@@ -54,6 +53,7 @@ public class Board {
             }
             System.out.println(s);
         }
+        System.out.println();
     }
 
     private static String strMap(Piece p) {
@@ -81,19 +81,25 @@ public class Board {
     public Position[] possibleMoves(Piece p) {
         ArrayList<Position> possibleMoves = new ArrayList<>(Arrays.asList(p.possibleMoves()));
 
-        for (int i = 0; i < possibleMoves.size(); i++) {
+        for (int i = 0; i < possibleMoves.size();) {
+            boolean increment = true;
             Piece pieceAtLoc = getPieceAtPosition(possibleMoves.get(i));
             if (pieceAtLoc != null && pieceAtLoc.white == p.white) {
                 possibleMoves.remove(pieceAtLoc.position);
-            }
-            if (p.type != PieceType.KNIGHT) {
+                increment = false;
+            } else if (p.type != PieceType.KNIGHT) {
                 Position[] spacesBetween = spacesBetween(p.position, possibleMoves.get(i));
-                for (Position b : spacesBetween) {
-                    if (getPieceAtPosition(b) != null) {
-                        possibleMoves.remove(b);
+                if (spacesBetween.length > 0) {
+                    for (Position b : spacesBetween) {
+                        if (getPieceAtPosition(b) != null) {
+                            possibleMoves.remove(i);
+                            increment = false;
+                            break;
+                        }
                     }
                 }
             }
+            i = increment ? i+1 : i;
         }
 
         Position[] pMoves = new Position[possibleMoves.size()];
@@ -105,7 +111,7 @@ public class Board {
         int currentX = p1.x() + xShift;
         int currentY = p1.y() + yShift;
         ArrayList<Position> positions = new ArrayList<>();
-        while (currentX != p2.x() && currentY != p2.y()) {
+        while (currentX != p2.x() || currentY != p2.y()) {
             positions.add(new Position(currentX, currentY));
             currentX += xShift;
             currentY += yShift;
