@@ -8,6 +8,11 @@ public class Piece {
     public Position position;
     public boolean white;
 
+    public Piece(Piece copy) {
+        this.type = copy.type;
+        this.position = copy.position;
+        this.white = copy.white;
+    }
     public Piece(PieceType type, Position position, boolean white) {
         this.type = type;
         this.position = position;
@@ -69,15 +74,18 @@ public class Piece {
             return positions.toArray(p);
         } else {
             ArrayList<Position> positions = new ArrayList<>();
-            for (int offset=-1; offset<2; offset+=2) {
-                Position p1 = new Position(position.x() + offset, position.y());
-                Position p2 = new Position(position.x(), position.y() + offset);
-                if (validPos(p1)) {
-                    positions.add(p1);
+            for (int xOffset=-1; xOffset<2; xOffset+=1) {
+                for (int yOffset=-1; yOffset<2; yOffset+=1) {
+                    if (xOffset == 0 && yOffset == 0) {
+                        continue;
+                    }
+                    Position p1 = new Position(position.x()+xOffset, position.y()+yOffset);
+                    if (validPos(p1)) {
+                        positions.add(p1);
+                    }
                 }
-                if (validPos(p2)) {
-                    positions.add(p2);
-                }
+
+
             }
 
             Position[] p = new Position[positions.size()];
