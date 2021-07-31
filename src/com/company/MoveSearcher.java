@@ -1,67 +1,81 @@
 package com.company;
 
-import java.util.HashMap;
+public class MoveSearcher {
 
-public class MoveSearcher implements Runnable {
-    MoveSearcher root;
-    Board board;
-    static final int RECURSIVE_DEPTH = 5;
-    private Move moveCheck;
-    private HashMap<Move, Integer> bestMoves;
+    static final int RECURSIVE_DEPTH = 3;
+    private final Board board;
 
-
-    public MoveSearcher(Board board, MoveSearcher root, Move moveCheck) {
-        this.board = board;
-        this.root = root;
-        this.moveCheck = moveCheck;
-        if (root == null) {
-            bestMoves = new HashMap<>();
-        }
+    public MoveSearcher(Board b) {
+        this.board = b;
     }
 
     public Move search() {
-        return null;
+        Move[] possibleMoves = board.allPossibleMoves(false);
+        if (possibleMoves.length == 0) {
+            return null;
+        } else if (possibleMoves.length == 1) {
+            return possibleMoves[0];
+        } else {
+            return possibleMoves[search(Integer.MIN_VALUE, Integer.MAX_VALUE, RECURSIVE_DEPTH, false, true)];
+        }
     }
 
-    public int search(int alpha, int beta, int depth, boolean maximize) {
+
+    private int search(int alpha, int beta, int depth, boolean maximize, boolean root) {
         if (depth == 0) {
             return board.scoreBoard();
         }
 
         if (maximize) {
             int max = Integer.MIN_VALUE;
-            for (Move m : board.allPossibleMoves(true)) {
+            int highestIndex = -1;
+            Move[] allPossibleMoves = board.allPossibleMoves(true);
+            for (int i = 0, allPossibleMovesLength = allPossibleMoves.length; i < allPossibleMovesLength; i++) {
+                Move m = allPossibleMoves[i];
                 board.movePiece(m.from(), m.to(), true);
-                int val = search(alpha, beta, depth - 1, false);
+                int val = search(alpha, beta, depth - 1, false, false);
+                if (root) {
+                    System.out.println(i + " / " + allPossibleMoves.length);
+                }
                 board.undo();
                 max = Math.max(val, max);
+                if (max == val) {
+                    highestIndex = i;
+                }
                 alpha = Math.max(val, max);
-                if (beta <= alpha) {
+                if (beta < alpha) {
                     break;
                 }
             }
-            return max;
+            if (root) {
+                System.out.println(allPossibleMoves[highestIndex].from());
+            }
+            return root ? highestIndex : max;
         } else {
             int min = Integer.MAX_VALUE;
-            for (Move m : board.allPossibleMoves(false)) {
-                int val = search(alpha, beta, depth-1, true);
+            int lowestIndex = -1;
+            Move[] allPossibleMoves = board.allPossibleMoves(false);
+            for (int i = 0, allPossibleMovesLength = allPossibleMoves.length; i < allPossibleMovesLength; i++) {
+                Move m = allPossibleMoves[i];
+                board.movePiece(m.from(), m.to(), true);
+                int val = search(alpha, beta, depth - 1, true, false);
+                if (root) {
+                    System.out.println(i + " / " + allPossibleMoves.length);
+                }
+                board.undo();
                 min = Math.min(val, min);
+                if (val == min) {
+                    lowestIndex = i;
+                }
                 beta = Math.min(val, beta);
-                if (beta <= alpha) {
+                if (beta < alpha) {
                     break;
                 }
             }
-            return min;
+            if (root) {
+                System.out.println(allPossibleMoves[lowestIndex].from());
+            }
+            return root ? lowestIndex : min;
         }
-    }
-
-
-
-
-    @Override
-    public void run() {
-        int best = search(Integer.MIN_VALUE, Integer.MAX_VALUE, RECURSIVE_DEPTH, false);
-
-
     }
 }

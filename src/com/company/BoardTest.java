@@ -31,9 +31,9 @@ class BoardTest {
         Board b1 = new Board();
         Board b2 = new Board(p1);
         b2.drawBoard();
-        assertArrayEquals(b1.possibleMoves(new Position(1, 1)), new Position[] {new Position(1, 2), new Position(1, 3)});
+        assertArrayEquals(b1.possibleMoves(new Position(1, 1)), new Position[]{new Position(1, 2), new Position(1, 3)});
         assertEquals(0, b1.possibleMoves(new Position(3, 0)).length);
-        assertArrayEquals(b1.possibleMoves(new Position(1, 0)), new Position[] {new Position(0, 2), new Position(2, 2)});
+        assertArrayEquals(b1.possibleMoves(new Position(1, 0)), new Position[]{new Position(0, 2), new Position(2, 2)});
         assertEquals(0, b1.possibleMoves(new Position(7, 7)).length);
 
         assertEquals(1, b2.possibleMoves(new Position(1, 1)).length);
@@ -88,7 +88,37 @@ class BoardTest {
         b2.undo();
         assertTrue(b2.getPiece(new Position(2, 4)).type == PieceType.QUEEN && b2.getPiece(new Position(2, 4)).white);
         assertTrue(b2.getPiece(new Position(2, 7)).type == PieceType.ROOK && !b2.getPiece(new Position(2, 7)).white);
+
+        ArrayList<Piece> layout2 = new ArrayList<>();
+        layout2.add(new Piece(PieceType.ROOK, new Position(3, 3), true));
+        layout2.add(new Piece(PieceType.QUEEN, new Position(3, 6), false));
+
+        Board b3 = new Board(layout2);
+        b3.movePiece(new Position(3, 3), new Position(3, 6), true);
+        b3.movePiece(new Position(3, 6), new Position(0, 6), true);
+
+        assertNull(b3.getPiece(new Position(3, 6)));
+        assertSame(b3.getPiece(new Position(0, 6)).type, PieceType.ROOK);
+
+        b3.undo();
+
+        assertEquals(1, b3.pieces.size());
+        assertSame(b3.getPiece(new Position(3, 6)).type, PieceType.ROOK);
+        assertNull(b3.getPiece(new Position(3, 3)));
+
+        b3.movePiece(new Position(3, 6), new Position(7, 6), true);
+        assertEquals(1, b3.pieces.size());
+        assertSame(b3.getPiece(new Position(7, 6)).type, PieceType.ROOK);
+
+
+        b3.undo();
+        b3.undo();
+
+        assertSame(b3.getPiece(new Position(3, 3)).type, PieceType.ROOK);
+        assertSame(b3.getPiece(new Position(3, 6)).type, PieceType.QUEEN);
+
     }
+
     @Test
     void testCheckMate() {
         ArrayList<Piece> layout = new ArrayList<>();

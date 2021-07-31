@@ -11,7 +11,7 @@ public class PerfTester implements Runnable {
     public static void main(String[] args) throws InterruptedException {
         System.out.println(Runtime.getRuntime().availableProcessors());
         ArrayList<Thread> threads = new ArrayList<>();
-        for (int i=0; i<Runtime.getRuntime().availableProcessors(); i++) {
+        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
 
             threads.add(new Thread(new PerfTester()));
             threads.get(threads.size() - 1).start();
@@ -28,7 +28,7 @@ public class PerfTester implements Runnable {
     public void run() {
         Board b = new Board();
         do {
-            Piece[] pieces = b.copyPieces();
+            ArrayList<Piece> pieces = Board.deepCopyArrayList(b.pieces);
             for (Piece p : pieces) {
                 b.possibleMoves(p.position);
             }
