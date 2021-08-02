@@ -7,21 +7,23 @@ import java.util.HashMap;
 
 
 public class Board {
-    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_RED = "\u001B[32m";
     public static final String ANSI_BLUE = "\u001B[34m";
     public static final String ANSI_WHITE_BACKGROUND = "\u001B[47m";
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_BOLD = "\u001B[1m";
+    public static final String ANSI_GREEN_BACKGROUND = "\u001B[41m";
     private static final PieceType[] initialOrder = {PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.KING, PieceType.QUEEN, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK};
     private static final HashMap<PieceType, Integer> mobilityScore = new HashMap<>();
     private static final HashMap<PieceType, Integer> threatenedScore = new HashMap<>();
     private static final HashMap<PieceType, Integer> protectedScore = new HashMap<>();
     private static final HashMap<PieceType, Integer> pieceValueScore = new HashMap<>();
     public final ArrayList<Piece> pieces;
-    private final ArrayList<ArrayList<Piece>> rewinds = new ArrayList<>();
-    private final ArrayList<Position> deletionPosition = new ArrayList<>();
+    public HashMap<Position, Boolean> hasMoved = new HashMap<>();
+    private final ArrayList<ArrayList<Piece>> piecesToAdd = new ArrayList<>();
+    private final ArrayList<ArrayList<Position>> piecesToRemove = new ArrayList<>();
     private final HashMap<MoveQuery, Position[]> cache = new HashMap<>();
-
+    private final ArrayList<HashMap<Position, Boolean>> hasMovedRewind = new ArrayList<>();
 
     public Board() {
         pieces = new ArrayList<>();
@@ -34,6 +36,7 @@ public class Board {
         initializeDicts();
 
     }
+
 
     public Board(ArrayList<Piece> pieces) {
         this.pieces = pieces;
@@ -69,6 +72,13 @@ public class Board {
     }
 
     private void initializeDicts() {
+        hasMoved.put(new Position(3, 0), false);
+        hasMoved.put(new Position(0, 0), false);
+        hasMoved.put(new Position(7, 0), false);
+        hasMoved.put(new Position(0, 7), false);
+        hasMoved.put(new Position(7, 7), false);
+        hasMoved.put(new Position(3, 7), false);
+
         if (!pieceValueScore.isEmpty()) return;
 
         PieceType[] typeOrder = new PieceType[]{PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN, PieceType.KING};
@@ -82,6 +92,7 @@ public class Board {
             protectedScore.put(typeOrder[i], protect[i]);
             pieceValueScore.put(typeOrder[i], piece[i]);
         }
+
     }
 
     public Piece getPiece(PieceType type, boolean white) {
@@ -100,17 +111,18 @@ public class Board {
 
     }
 
-    public void drawBoard() {
+    public void drawBoard(Move m) {
         boolean white = true;
         for (int x = 7; x >= 0; x--) {
             StringBuilder s = new StringBuilder(x + "  ");
 
             for (int y = 0; y < 8; y++) {
                 Piece p = getPiece(new Position(y, x));
+                String background = (m != null && (m.from().equals(new Position(y, x)) || m.to().equals(new Position(y, x)))) ? ANSI_GREEN_BACKGROUND : "";
                 if (p == null) {
-                    s.append(white ? ANSI_WHITE_BACKGROUND : "").append("   ").append(ANSI_RESET);
+                    s.append(white ? ANSI_WHITE_BACKGROUND : "").append(background).append("   ").append(ANSI_RESET);
                 } else {
-                    s.append(white ? ANSI_WHITE_BACKGROUND : "").append(strMap(p)).append(ANSI_RESET);
+                    s.append(white ? ANSI_WHITE_BACKGROUND : "").append(background).append(strMap(p)).append(ANSI_RESET);
                 }
                 white = (y == 7) == white;
 
@@ -195,7 +207,7 @@ public class Board {
                     i++;
                     continue;
                 }
-                movePiece(piecePosition, position, false);
+                movePiece(piecePosition, position, false, false);
                 if (kingUnderPressure(p.white)) {
                     possibleMoves.remove(i);
                 } else {
@@ -215,41 +227,82 @@ public class Board {
         return pMoves;
     }
 
-    public void movePiece(Position from, Position to, boolean clearCache) {
+    public void castle(boolean white, boolean left) {
+
+        hasMovedRewind.add(deepCopyHashMap(hasMoved));
+        hasMoved.computeIfPresent(new Position(3, white ? 0 : 7), (key, value) -> true);
+
+        pieces.add(new Piece(PieceType.ROOK, new Position(3 + (left ? -1 : 1), white ? 0 : 7), white));
+        pieces.add(new Piece(PieceType.KING, new Position(3 + (left ? -2 : 2), white ? 0 : 7), white));
+        piecesToAdd.add(new ArrayList<>());
+        piecesToRemove.add(new ArrayList<>());
+
+        piecesToAdd.get(piecesToAdd.size() - 1).add(getPiece(new Position(3, white ? 0 : 7)));
+        piecesToAdd.get(piecesToAdd.size() - 1).add(getPiece(new Position(left ? 0 : 7, white ? 0 : 7)));
+
+        piecesToRemove.get(piecesToRemove.size() - 1).add(pieces.get(pieces.size() - 1).position);
+        piecesToRemove.get(piecesToRemove.size() - 1).add(pieces.get(pieces.size() - 2).position);
+        pieces.remove(getPiece(new Position(3, white ? 0 : 7)));
+        pieces.remove(getPiece(new Position(left ? 0 : 7, white ? 0 : 7)));
+
+        cache.clear();
+
+
+
+    }
+
+    public void movePiece(Position from, Position to, boolean clearCache, boolean display) {
+        hasMovedRewind.add(deepCopyHashMap(hasMoved));
+        hasMoved.computeIfPresent(from, (key, value) -> true);
+
         Piece pieceFrom = getPiece(from);
-        rewinds.add(new ArrayList<>());
-        rewinds.get(rewinds.size() - 1).add(pieceFrom.copy());
+        piecesToAdd.add(new ArrayList<>());
+        piecesToRemove.add(new ArrayList<>());
+        piecesToAdd.get(piecesToAdd.size() - 1).add(pieceFrom.copy());
         Piece pieceTo = getPiece(to);
+
+
+
         if (pieceTo != null) {
             assert (pieceTo.type != PieceType.KING);
-            rewinds.get(rewinds.size() - 1).add(pieceTo.copy());
+            piecesToAdd.get(piecesToAdd.size() - 1).add(pieceTo.copy());
             pieces.remove(pieceTo);
-            deletionPosition.add(null);
         } else {
-            deletionPosition.add(to);
+            piecesToRemove.get(piecesToRemove.size() - 1).add(to);
         }
         pieceFrom.position = to;
+        if (pieceFrom.type == PieceType.PAWN && (pieceFrom.position.y() == 7 || pieceFrom.position.y() == 0)) {
+            pieceFrom.type = PieceType.QUEEN;
+        }
         if (clearCache) {
             cache.clear();
+        }
+        if (display) {
+            drawBoard(new Move(from, to));
         }
     }
 
     public void undo() {
-        if (deletionPosition.size() == 0) {
+        if (piecesToRemove.size() == 0) {
             return;
         }
-        for (Piece p : rewinds.get(rewinds.size() - 1)) {
+        for (Piece p : piecesToAdd.get(piecesToAdd.size() - 1)) {
             Piece atLoc = getPiece(p.position);
             if (atLoc != null) {
                 pieces.remove(atLoc);
             }
             pieces.add(p);
+
         }
-        if (deletionPosition.get(deletionPosition.size() - 1) != null) {
-            pieces.remove(getPiece(deletionPosition.get(deletionPosition.size() - 1)));
+        for (Position p : piecesToRemove.get(piecesToRemove.size() - 1)) {
+            pieces.remove(getPiece(p));
         }
-        deletionPosition.remove(deletionPosition.size() - 1);
-        rewinds.remove(rewinds.size() - 1);
+
+        piecesToRemove.remove(piecesToRemove.size() - 1);
+        piecesToAdd.remove(piecesToAdd.size() - 1);
+
+        hasMoved = hasMovedRewind.get(hasMovedRewind.size()-1);
+        hasMovedRewind.remove(hasMovedRewind.size()-1);
     }
 
     private Position[] spacesBetween(Position p1, Position p2) {
@@ -312,12 +365,16 @@ public class Board {
         return score;
     }
 
+
     public Move[] allPossibleMoves(boolean white) {
+        return allPossibleMoves(white, true, false, true);
+    }
+    public Move[] allPossibleMoves(boolean white, boolean baseMove, boolean includeOwnTeam, boolean canUseCache) {
         ArrayList<Move> possMoves = new ArrayList<>();
         ArrayList<Piece> copy = deepCopyArrayList(pieces);
         for (Piece p : copy) {
             if (p.white == white) {
-                for (Position position : possibleMoves(p.position)) {
+                for (Position position : possibleMoves(p, baseMove, includeOwnTeam, canUseCache)) {
                     possMoves.add(new Move(p.position, position));
                 }
             }
@@ -326,5 +383,44 @@ public class Board {
         return possMoves.toArray(moves);
     }
 
+    private boolean canCastleTo(boolean left, boolean white) {
 
+        int x = left ? 0 : 7;
+        int y = white ? 0 : 7;
+
+        if (!hasMoved.get(new Position(x, y))) {
+            for (Position p : spacesBetween(new Position(x, y), new Position(3, y))) {
+                if (getPiece(p) != null) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+
+        Position[] spacesBetween = new Position[] {new Position(3 + (left ? -1 : 1), white ? 0 : 7), new Position(3 + (left ? -2 : 2), white ? 0 : 7)};
+        Move[] allOpponentMoves = allPossibleMoves(!white, false, false, true);
+
+        return Arrays.stream(allOpponentMoves).noneMatch(m -> m.to().equals(spacesBetween[0])) && Arrays.stream(allOpponentMoves).noneMatch(m -> m.to().equals(spacesBetween[1]));
+    }
+
+    boolean[] castles(boolean white) {
+        /*
+        if (canCastle.get(new Position(3, white ? 0 : 7)) == 0) {
+            return new boolean[]{canCastleTo(true, white), canCastleTo(false, white)};
+        }
+        return new boolean[]{false, false};*/
+
+        if (!hasMoved.get(new Position(3, white ? 0 : 7))) {
+            return new boolean[] {canCastleTo(true, white), canCastleTo(false, white)};
+        }
+        return new boolean[]{false, false};
+    }
+    private  HashMap<Position, Boolean> deepCopyHashMap(HashMap<Position, Boolean> map) {
+        HashMap<Position, Boolean> copy = new HashMap<>();
+        for (Position key : map.keySet()) {
+            copy.put(key, map.get(key).booleanValue());
+        }
+        return copy;
+    }
 }

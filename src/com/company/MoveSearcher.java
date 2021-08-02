@@ -32,10 +32,10 @@ public class MoveSearcher {
             Move[] allPossibleMoves = board.allPossibleMoves(true);
             for (int i = 0, allPossibleMovesLength = allPossibleMoves.length; i < allPossibleMovesLength; i++) {
                 Move m = allPossibleMoves[i];
-                board.movePiece(m.from(), m.to(), true);
+                board.movePiece(m.from(), m.to(), true, false);
                 int val = search(alpha, beta, depth - 1, false, false);
                 if (root) {
-                    System.out.println(i + " / " + allPossibleMoves.length);
+                    if ((i+1) % 5 == 0) System.out.println((i+1) + " / " + allPossibleMoves.length);
                 }
                 board.undo();
                 max = Math.max(val, max);
@@ -47,9 +47,7 @@ public class MoveSearcher {
                     break;
                 }
             }
-            if (root) {
-                System.out.println(allPossibleMoves[highestIndex].from());
-            }
+
             return root ? highestIndex : max;
         } else {
             int min = Integer.MAX_VALUE;
@@ -57,10 +55,10 @@ public class MoveSearcher {
             Move[] allPossibleMoves = board.allPossibleMoves(false);
             for (int i = 0, allPossibleMovesLength = allPossibleMoves.length; i < allPossibleMovesLength; i++) {
                 Move m = allPossibleMoves[i];
-                board.movePiece(m.from(), m.to(), true);
+                board.movePiece(m.from(), m.to(), true, false);
                 int val = search(alpha, beta, depth - 1, true, false);
                 if (root) {
-                    System.out.println(i + " / " + allPossibleMoves.length);
+                    if ((i+1) % 5 == 0) System.out.println((i+1) + " / " + allPossibleMoves.length);
                 }
                 board.undo();
                 min = Math.min(val, min);

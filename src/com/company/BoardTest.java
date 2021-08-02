@@ -30,7 +30,7 @@ class BoardTest {
 
         Board b1 = new Board();
         Board b2 = new Board(p1);
-        b2.drawBoard();
+        b2.drawBoard(null);
         assertArrayEquals(b1.possibleMoves(new Position(1, 1)), new Position[]{new Position(1, 2), new Position(1, 3)});
         assertEquals(0, b1.possibleMoves(new Position(3, 0)).length);
         assertArrayEquals(b1.possibleMoves(new Position(1, 0)), new Position[]{new Position(0, 2), new Position(2, 2)});
@@ -72,7 +72,7 @@ class BoardTest {
     void testRewind() {
         Board b = new Board();
         b.undo();
-        b.movePiece(new Position(1, 1), new Position(1, 2), true);
+        b.movePiece(new Position(1, 1), new Position(1, 2), true, false);
         assertSame(b.getPiece(new Position(1, 2)).type, PieceType.PAWN);
         b.undo();
         assertSame(b.getPiece(new Position(1, 1)).type, PieceType.PAWN);
@@ -82,7 +82,7 @@ class BoardTest {
         layout.add(new Piece(PieceType.QUEEN, new Position(2, 4), true));
         layout.add(new Piece(PieceType.ROOK, new Position(2, 7), false));
         Board b2 = new Board(layout);
-        b2.movePiece(new Position(2, 4), new Position(2, 7), true);
+        b2.movePiece(new Position(2, 4), new Position(2, 7), true, false);
         assertNull(b2.getPiece(new Position(2, 4)));
         assertTrue(b2.getPiece(new Position(2, 7)).type == PieceType.QUEEN && b2.getPiece(new Position(2, 7)).white);
         b2.undo();
@@ -94,8 +94,8 @@ class BoardTest {
         layout2.add(new Piece(PieceType.QUEEN, new Position(3, 6), false));
 
         Board b3 = new Board(layout2);
-        b3.movePiece(new Position(3, 3), new Position(3, 6), true);
-        b3.movePiece(new Position(3, 6), new Position(0, 6), true);
+        b3.movePiece(new Position(3, 3), new Position(3, 6), true, false);
+        b3.movePiece(new Position(3, 6), new Position(0, 6), true, false);
 
         assertNull(b3.getPiece(new Position(3, 6)));
         assertSame(b3.getPiece(new Position(0, 6)).type, PieceType.ROOK);
@@ -106,7 +106,7 @@ class BoardTest {
         assertSame(b3.getPiece(new Position(3, 6)).type, PieceType.ROOK);
         assertNull(b3.getPiece(new Position(3, 3)));
 
-        b3.movePiece(new Position(3, 6), new Position(7, 6), true);
+        b3.movePiece(new Position(3, 6), new Position(7, 6), true, false);
         assertEquals(1, b3.pieces.size());
         assertSame(b3.getPiece(new Position(7, 6)).type, PieceType.ROOK);
 
@@ -129,7 +129,7 @@ class BoardTest {
         layout.add(new Piece(PieceType.QUEEN, new Position(3, 2), false));
 
         Board b = new Board(layout);
-        b.drawBoard();
+        b.drawBoard(null);
         assertEquals(0, b.possibleMoves(new Position(5, 7)).length);
         assertTrue(Arrays.asList(b.possibleMoves(new Position(3, 2))).contains(new Position(3, 7)));
         assertEquals(1, b.possibleMoves(new Position(3, 2)).length);
@@ -193,7 +193,7 @@ class BoardTest {
         layout.add(new Piece(PieceType.BISHOP, new Position(1, 0), true));
 
         Board b = new Board(layout);
-        b.drawBoard();
+        b.drawBoard(null);
         assertEquals(12, b.possibleMoves(b.getPiece(new Position(3, 0)), true, true, true).length);
         assertEquals(9, b.possibleMoves(b.getPiece(new Position(2, 0)), true, true, true).length);
         assertEquals(3, b.possibleMoves(b.getPiece(new Position(0, 0)), true, true, true).length);
@@ -210,6 +210,101 @@ class BoardTest {
         layout.add(new Piece(PieceType.ROOK, new Position(7, 6), false));
         layout.add(new Piece(PieceType.QUEEN, new Position(7, 0), true));
         Board b = new Board(layout);
-        b.drawBoard();
+        b.drawBoard(null);
     }
+
+    @Test
+    void testPawnAdvancement() {
+        ArrayList<Piece> layout = new ArrayList<>();
+        layout.add(new Piece(PieceType.KING, new Position(2, 2), true));
+        layout.add(new Piece(PieceType.KING, new Position(6, 6), false));
+        layout.add(new Piece(PieceType.PAWN, new Position(3, 6), true));
+        layout.add(new Piece(PieceType.PAWN, new Position(1, 1), false));
+        Board b = new Board(layout);
+        b.drawBoard(null);
+        b.movePiece(new Position(3, 6), new Position(3, 7), true, false);
+        b.movePiece(new Position(1, 1), new Position(1, 0), true, false);
+
+        assertSame(b.getPiece(new Position(3, 7)).type, PieceType.QUEEN);
+        assertSame(b.getPiece(new Position(1, 0)).type, PieceType.QUEEN);
+
+        b.undo();
+        assertNull(b.getPiece(new Position(1, 0)));
+        assertSame(b.getPiece(new Position(3, 7)).type, PieceType.QUEEN);
+        b.undo();
+        assertNull(b.getPiece(new Position(1, 0)));
+        assertNull(b.getPiece(new Position(3, 7)));
+        assertSame(b.getPiece(new Position(3, 6)).type, PieceType.PAWN);
+        assertSame(b.getPiece(new Position(1, 1)).type, PieceType.PAWN);
+    }
+
+    @Test
+    void testCastleMoveCheck() {
+        ArrayList<Piece> layout = new ArrayList<>();
+        layout.add(new Piece(PieceType.KING, new Position(3, 0), true));
+        layout.add(new Piece(PieceType.ROOK, new Position(0, 0), true));
+        layout.add(new Piece(PieceType.ROOK, new Position(7, 0), true));
+        layout.add(new Piece(PieceType.KING, new Position(3, 7), false));
+        layout.add(new Piece(PieceType.ROOK, new Position(0, 7), false));
+        layout.add(new Piece(PieceType.ROOK, new Position(7, 7), false));
+        Board b1 = new Board(layout);
+        assertArrayEquals(new boolean[]{true, true}, b1.castles(true));
+        assertArrayEquals(new boolean[]{true, true}, b1.castles(false));
+        b1.drawBoard(null);
+
+        b1.movePiece(new Position(0, 0), new Position(0, 1), true, false);
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+        assertArrayEquals(new boolean[]{false, true}, b1.castles(true));
+        b1.movePiece(new Position(3, 0), new Position(3, 1), true, false);
+        assertArrayEquals(new boolean[]{false, false}, b1.castles(true));
+        b1.undo();
+        assertArrayEquals(new boolean[]{false, true}, b1.castles(true));
+        b1.undo();
+        assertArrayEquals(new boolean[]{true, true}, b1.castles(true));
+        assertFalse(b1.hasMoved.get(new Position(0, 0)));
+
+        b1.movePiece(new Position(0, 0), new Position(0, 1), true, false);
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+        b1.movePiece(new Position(7, 0), new Position(0, 0), true, false);
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+        b1.movePiece(new Position(0, 0), new Position(1, 0), true, false);
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+
+        b1.undo();
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+        b1.undo();
+        assertTrue(b1.hasMoved.get(new Position(0, 0)));
+        b1.undo();
+        assertFalse(b1.hasMoved.get(new Position(0, 0)));
+    }
+
+    @Test
+    void testCastle() {
+        ArrayList<Piece> layout = new ArrayList<>();
+        layout.add(new Piece(PieceType.KING, new Position(3, 0), true));
+        layout.add(new Piece(PieceType.ROOK, new Position(0, 0), true));
+        layout.add(new Piece(PieceType.ROOK, new Position(7, 0), true));
+        layout.add(new Piece(PieceType.KING, new Position(3, 7), false));
+        layout.add(new Piece(PieceType.ROOK, new Position(0, 7), false));
+        layout.add(new Piece(PieceType.ROOK, new Position(7, 7), false));
+        Board b1 = new Board(layout);
+        b1.castle(true, true);
+        b1.castle(false, true);
+
+        assertSame(b1.getPiece(new Position(1, 7)).type, PieceType.KING);
+        assertSame(b1.getPiece(new Position(1, 0)).type, PieceType.KING);
+        assertSame(b1.getPiece(new Position(2, 7)).type, PieceType.ROOK);
+        assertSame(b1.getPiece(new Position(2, 0)).type, PieceType.ROOK);
+
+        b1.undo();
+        b1.undo();
+
+        assertNull(b1.getPiece(new Position(1, 7)));
+        assertNull(b1.getPiece(new Position(2, 7)));
+        assertNull(b1.getPiece(new Position(1, 0)));
+        assertNull(b1.getPiece(new Position(2, 0)));
+
+
+    }
+
 }
