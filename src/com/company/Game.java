@@ -12,6 +12,9 @@ public class Game {
     }
 
     private Position[] getInput() {
+        // get user's input
+        // formatted as <xfrom><yfrom> <xto><yto>
+        // c<l or r> is used to castle
         while (true) {
             try {
                 String s = scanner.nextLine();
@@ -38,6 +41,7 @@ public class Game {
 
             if (whiteTurn) {
                 System.out.print("Your Move: ");
+                // check for stalemate or win
                 if (board.allPossibleMoves(true).length == 0) {
                     if (board.kingUnderPressure(true)) {
                         System.out.println("Stalemate!");
@@ -46,7 +50,6 @@ public class Game {
                     }
                     break;
                 }
-
                 Position[] moves = getInput();
                 if (moves.length == 1) {
                     boolean[] castles = board.castles(true);
@@ -61,23 +64,14 @@ public class Game {
                         continue;
                     }
                 }
+                // check that the move exists and is valid
                 else if (board.getPiece(moves[0]) != null && Arrays.asList(board.possibleMoves(moves[0])).contains(moves[1])) {
-                    board.movePiece(moves[0], moves[1], true, true);
+                    board.movePiece(moves[0], moves[1], true);
                 } else {
                     System.out.println("Invalid Move");
                     continue;
                 }
             } else {
-                if (!blackHasCastled) {
-                    boolean[] castles = board.castles(false);
-                    if (castles[0]) {
-                        board.castle(false, true);
-                        blackHasCastled = true;
-                    } else if (castles[1]) {
-                        board.castle(false, false);
-                        blackHasCastled = true;
-                    }
-                }
 
                 Move m = new MoveSearcher(board).search();
                 if (m == null) {
@@ -88,9 +82,9 @@ public class Game {
                     }
                     break;
                 }
-                board.movePiece(m.from(), m.to(), true, true);
+                board.movePiece(m.from(), m.to(), true);
             }
-
+            // alternate turns
             whiteTurn = !whiteTurn;
         }
     }

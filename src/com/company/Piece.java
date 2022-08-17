@@ -5,6 +5,9 @@ import java.util.HashMap;
 
 public class Piece implements Copyable<Piece> {
 
+    // stores the quickly computed possible moves for a given piece and location
+    // method of finding is independent of board state
+    // results in alot of false positives, which are then pruned
     private static final HashMap<PreComputeMove, Position[]> moveCache = new HashMap<>();
     public PieceType type;
     public Position position;
@@ -23,17 +26,23 @@ public class Piece implements Copyable<Piece> {
     public Position[] possibleMoves() {
 
         if (type == PieceType.PAWN) {
+            // pawns need some special handling
             int mult = white ? 1 : -1;
             Position[] forward;
+
+            // find possible forward moves
             if ((white && position.y() == 1) || (!white && position.y() == 6)) {
+                // if able to advance by 2
                 forward = new Position[]{new Position(position.x(), position.y() + mult), new Position(position.x(), position.y() + 2 * mult)};
             } else {
+                // only advance by 1
                 if (!(white && position.y() == 7) && !(!white && position.y() == 0)) {
                     forward = new Position[]{new Position(position.x(), position.y() + mult)};
                 } else {
                     forward = new Position[0];
                 }
             }
+            // find forward diagonals
             Position[] diagonals = new Position[position.x() == 0 || position.x() == 7 ? 1 : 2];
             int i = 0;
             if (position.x() != 7) {
@@ -44,10 +53,12 @@ public class Piece implements Copyable<Piece> {
                 diagonals[i] = new Position(position.x() - 1, position.y() + mult);
             }
             Position[] moves = new Position[forward.length + diagonals.length];
+            // copy the forward and diagonal arrays into moves
             System.arraycopy(forward, 0, moves, 0, forward.length);
             System.arraycopy(diagonals, 0, moves, forward.length, diagonals.length);
             return moves;
         } else {
+            // check for value in cache
             PreComputeMove move = new PreComputeMove(position, type);
             if (moveCache.containsKey(move)) {
                 return moveCache.get(move);
@@ -65,9 +76,11 @@ public class Piece implements Copyable<Piece> {
                 positions = diagonalPositions();
             } else if (type == PieceType.KNIGHT) {
                 ArrayList<Position> positionsArr = new ArrayList<>();
+                // iterate over all possible knight moves, adding them to the array if the loc is on the board
                 for (int i = 0; i < 2; i++) {
                     int xVal = i == 0 ? 2 : 1;
                     int yVal = i == 0 ? 1 : 2;
+
                     for (int xShift = -xVal; xShift <= xVal; xShift += xVal * 2) {
                         for (int yShift = -yVal; yShift <= yVal; yShift += 2 * yVal) {
                             Position p = new Position(position.x() + xShift, position.y() + yShift);
@@ -79,7 +92,7 @@ public class Piece implements Copyable<Piece> {
                 }
                 Position[] p = new Position[positionsArr.size()];
                 positions = positionsArr.toArray(p);
-            } else {
+            } else { // king moves
                 ArrayList<Position> positionsArr = new ArrayList<>();
                 for (int xOffset = -1; xOffset < 2; xOffset += 1) {
                     for (int yOffset = -1; yOffset < 2; yOffset += 1) {
@@ -98,12 +111,14 @@ public class Piece implements Copyable<Piece> {
                 Position[] p = new Position[positionsArr.size()];
                 positions = positionsArr.toArray(p);
             }
+            // add positions to cache
             moveCache.put(move, positions);
             return positions;
         }
     }
 
     private Position[] xyPositions() {
+        // get up/down/left/right moves
         Position[] positions = new Position[14];
         int i = 0;
         for (int j = 0; j < 8; j++) {
@@ -120,7 +135,7 @@ public class Piece implements Copyable<Piece> {
     }
 
     private Position[] diagonalPositions() {
-
+        // get diagonal moves (ex. bishops and queens)
         ArrayList<Position> positions = new ArrayList<>();
         int currentX = position.x();
         int currentY = position.y();
